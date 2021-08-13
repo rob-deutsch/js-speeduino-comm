@@ -1,9 +1,19 @@
 import SerialPort from 'serialport'
+import prompt from 'prompt';
+import { finished } from 'stream'
 
 console.log("Initial run");
-SerialPort.list().then((ports) => {
+SerialPort.list().then(async (ports) => {
     for (let idx in ports) {
         const port = ports[idx]
         console.log(`[${idx}]: ${port.path}`)
     }
+    const choice = await prompt.get(['id'])
+    const port = ports[parseInt(choice['id'] as string)]
+
+    const sp = new SerialPort(port.path, {baudRate: 115200, autoOpen: false})
+    const outputPipe  = sp.pipe(process.stdout)
+    sp.open((err) => {
+        sp.write(Buffer.from([0x72, 0x00, 0x30, 0x00, 0x00, 0x72, 0x00]))
+    })
 })
