@@ -15,6 +15,7 @@ SerialPort.list().then(async (ports) => {
     const outputPipe  = sp.pipe(process.stdout)
     sp.open((err) => {
         if (err) throw err
+        sp.write('S')
         sp.write(Buffer.from([0x72, 0x00, 0x30, 0x00, 0x00, 0x72, 0x00]))
     })
 })
