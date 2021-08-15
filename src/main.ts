@@ -41,7 +41,7 @@ class SpeeduinoParser extends Writable {
             remaining = remaining.slice(used)
         }
         if (remaining.length > 0) {
-            // TODO: Report error
+            this.emit('unexpected', remaining)
         }
         cb()
     }
@@ -157,6 +157,7 @@ class SpeeduinoComm {
         this.path = path
         this.sp = new SerialPort(path, {baudRate: 115200, autoOpen: false})
         this.parser = this.sp.pipe(new SpeeduinoParser)
+        this.parser.on('unexpected', (data) => console.log("Unexpected data", data))
     }
 
     pipe<T extends NodeJS.WritableStream>(destination: T, options?: {end?: boolean}): T {
@@ -193,7 +194,7 @@ SerialPort.list().then(async (ports) => {
     speedy.open((err) => {
         if (err) throw err
         // speedy.write('S')
-        speedy.sendCommand(Buffer.from('Q'), new TResponse(100)).then((response) => {
+        speedy.sendCommand(Buffer.from('Q'), new SResponse(5)).then((response) => {
             console.log(response.toString('ascii'))
         })
         // speedy.write(Buffer.from([0x72, 0x00, 0x30, 0x00, 0x00, 0x72, 0x00]))
