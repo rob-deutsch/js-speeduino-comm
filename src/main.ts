@@ -131,7 +131,7 @@ class TResponse implements SpeeduinoResponseParserPromise{
                 return [true, cursor]
             }
         }
-        this.intervalID = setTimeout(this.emitPacket.bind(this), 1000)
+        this.intervalID = setTimeout(this.emitPacket.bind(this), this.interval)
         return [false, cursor]
     }
     emitPacket() {
@@ -196,7 +196,7 @@ SerialPort.list().then(async (ports) => {
     speedy.open((err) => {
         if (err) throw err
         // speedy.write('S')
-        speedy.sendCommand(Buffer.from('Q'), new TResponse(1)).then((response) => {
+        speedy.sendCommand(Buffer.from('Q'), new TResponse(100)).then((response) => {
             console.log(response.toString('ascii'))
         })
         // speedy.write(Buffer.from([0x72, 0x00, 0x30, 0x00, 0x00, 0x72, 0x00]))
