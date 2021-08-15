@@ -152,6 +152,7 @@ class SpeeduinoComm {
     path: string
     sp: SerialPort
     parser: SpeeduinoParser
+    lastPromise?: Promise<Buffer>
 
     constructor(path: string) {
         this.path = path
@@ -172,9 +173,16 @@ class SpeeduinoComm {
         this.sp.write(buffer)
     }
 
-    sendCommand(cmd: Buffer, rp: SpeeduinoResponseParserPromise): Promise<Buffer> {
-        this.parser.addParser(rp)
-        this.write(cmd)
+    async sendCommand(cmd: Buffer, rp: SpeeduinoResponseParserPromise): Promise<Buffer> {
+        let lastPromise: Promise<any> | undefined = this.lastPromise
+        this.lastPromise = rp.getValue()
+        if(!lastPromise) {
+            lastPromise = new Promise<void>((resolve) => resolve())
+        }
+        lastPromise.finally(() => {
+            this.parser.addParser(rp)
+            this.write(cmd)
+        })
         return rp.getValue()
     }
 }
@@ -195,6 +203,9 @@ SerialPort.list().then(async (ports) => {
         if (err) throw err
         // speedy.write('S')
         speedy.sendCommand(Buffer.from('Q'), new SResponse(5)).then((response) => {
+            console.log(response.toString('ascii'))
+        })
+        speedy.sendCommand(Buffer.from('S'), new SResponse(5)).then((response) => {
             console.log(response.toString('ascii'))
         })
         // speedy.write(Buffer.from([0x72, 0x00, 0x30, 0x00, 0x00, 0x72, 0x00]))
