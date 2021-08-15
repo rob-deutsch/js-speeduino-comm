@@ -58,7 +58,7 @@ interface SpeeduinoResponseParserPromise extends SpeeduinoResponseParser{
     getValue(): Promise<Buffer>
 }
 
-class SResponse {
+class SResponse implements SpeeduinoResponseParserPromise{
     position: number
     buffer: Buffer
     p: Promise<Buffer>
@@ -88,6 +88,56 @@ class SResponse {
             }
         }
         return [false, cursor]
+    }
+    stop() {
+        if (this.pReject) {
+            this.pReject(this.buffer)
+            this.pResolve = undefined
+            this.pReject = undefined
+        }
+    }
+    getValue(): Promise<Buffer> {
+        return this.p
+    }
+}
+
+class TResponse implements SpeeduinoResponseParserPromise{
+    interval: number
+    intervalID?: NodeJS.Timeout
+    position: number
+    buffer: Buffer
+    p: Promise<Buffer>
+    pResolve?: (value: Buffer | PromiseLike<Buffer>) => void
+    pReject?: (reason?: any) => void
+    constructor(interval: number, maxBufferSize: number = 65536) {
+        this.position = 0
+        this.buffer = Buffer.alloc(maxBufferSize)
+        this.interval = interval
+        this.p = new Promise((resolve, reject) => {
+            this.pResolve = resolve
+            this.pReject = reject
+        })
+    }
+    write(chunk: Buffer): [boolean, number] {
+        if (!this.pResolve) return [true, 0]
+        if (this.intervalID) clearTimeout(this.intervalID)
+        let cursor = 0
+        while (cursor < chunk.length) {
+            this.buffer[this.position] = chunk[cursor]
+            cursor++
+            this.position++
+            if (this.position === this.buffer.length) {
+                this.emitPacket()
+                return [true, cursor]
+            }
+        }
+        this.intervalID = setTimeout(this.emitPacket.bind(this), 1000)
+        return [false, cursor]
+    }
+    emitPacket() {
+        this.pResolve!(this.buffer)
+        this.pResolve = undefined
+        this.pReject = undefined
     }
     stop() {
         if (this.pReject) {
@@ -146,7 +196,7 @@ SerialPort.list().then(async (ports) => {
     speedy.open((err) => {
         if (err) throw err
         // speedy.write('S')
-        speedy.sendCommand(Buffer.from('Q'), new SResponse(20)).then((response) => {
+        speedy.sendCommand(Buffer.from('Q'), new TResponse(1)).then((response) => {
             console.log(response.toString('ascii'))
         })
         // speedy.write(Buffer.from([0x72, 0x00, 0x30, 0x00, 0x00, 0x72, 0x00]))
