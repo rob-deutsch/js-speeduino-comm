@@ -18,23 +18,25 @@ class HexTransformer extends Transform {
 }
 
 class SpeeduinoParser extends Transform {
-    rps: SpeeduinoResponseParser[]
+    rp?: SpeeduinoResponseParser
     constructor() {
         super()
-        this.rps = []
     }
     addParser(rp: SpeeduinoResponseParser) {
-        this.rps.push(rp)
+        if (this.rp) {
+            const finished = this.rp.write(Buffer.alloc(0))[0]
+            if (!finished) {
+                throw "Previous parser not finished"
+            }
+        }
+        this.rp = rp
     }
     _transform(chunk: any, encoding: BufferEncoding, cb: TransformCallback): void {
         let remaining = Buffer.from(chunk)
-        let rp = this.rps.length > 0 ? this.rps[0] : undefined
-        while ((remaining.length > 0) && rp) {
-            let [finished, used] = rp.write(remaining)
+        while ((remaining.length > 0) && this.rp) {
+            let [finished, used] = this.rp.write(remaining)
             if (finished) {
-                // Remove this responseparser
-                this.rps.shift()
-                let rp = this.rps.length > 0 ? this.rps[0] : undefined
+                this.rp = undefined
             }
             remaining = remaining.slice(used)
         }
@@ -57,16 +59,14 @@ interface SpeeduinoResponseParserPromise extends SpeeduinoResponseParser{
 }
 
 class SResponse {
-    length: number
     position: number
     buffer: Buffer
     p: Promise<Buffer>
     pResolve?: (value: Buffer | PromiseLike<Buffer>) => void
     pReject?: (reason?: any) => void
     constructor(length: number) {
-        this.length = length
         this.position = 0
-        this.buffer = Buffer.alloc(this.length)
+        this.buffer = Buffer.alloc(length)
         this.p = new Promise((resolve, reject) => {
             this.pResolve = resolve
             this.pReject = reject
@@ -78,7 +78,7 @@ class SResponse {
             this.buffer[this.position] = chunk[cursor]
             cursor++
             this.position++
-            if (this.position === this.length) {
+            if (this.position === this.buffer.length) {
                 if (this.pResolve) {
                     this.pResolve(this.buffer)
                     this.pResolve = undefined
