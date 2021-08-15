@@ -132,7 +132,7 @@ class TResponse implements SpeeduinoResponseParserPromise{
         return [false, cursor]
     }
     emitPacket() {
-        this.pResolve!(this.buffer)
+        this.pResolve!(this.buffer.slice(0,this.position))
         this.pResolve = undefined
         this.pReject = undefined
     }
@@ -157,6 +157,7 @@ class SpeeduinoComm {
     constructor(path: string, pauseBetweenCommands: number = 10) {
         this.pauseBetweenCommands = pauseBetweenCommands
         this.sp = new SerialPort(path, {baudRate: 115200, autoOpen: false})
+        // this.sp.pipe(new HexTransformer).pipe(process.stdout)
         this.parser = this.sp.pipe(new SpeeduinoParser)
         this.parser.on('unexpected', (data) => console.log("Unexpected data", data))
     }
