@@ -59,8 +59,8 @@ class SResponse {
     p: Promise<Buffer>
     pResolve?: (value: Buffer | PromiseLike<Buffer>) => void
     pReject?: (reason?: any) => void
-    constructor() {
-        this.length = 20
+    constructor(length: number) {
+        this.length = length
         this.position = 0
         this.buffer = Buffer.alloc(this.length)
         this.p = new Promise((resolve, reject) => {
@@ -105,9 +105,11 @@ class SpeeduinoComm {
     constructor(path: string) {
         this.path = path
         this.sp = new SerialPort(path, {baudRate: 115200, autoOpen: false})
-        this.sp.pipe(new HexTransformer()).pipe(process.stdout)
-        this.parser = new SpeeduinoParser
-        this.sp.pipe(this.parser)
+        this.parser = this.sp.pipe(new SpeeduinoParser)
+    }
+
+    pipe<T extends NodeJS.WritableStream>(destination: T, options?: {end?: boolean}): T {
+        return this.sp.pipe(destination)
     }
 
     open(cb?: (error?: Error | null) => void) {
@@ -136,11 +138,12 @@ SerialPort.list().then(async (ports) => {
     const port = ports[parseInt(choice['id'] as string)]
 
     const speedy = new SpeeduinoComm(port.path)
+    // speedy.pipe(new HexTransformer()).pipe(process.stdout)
     speedy.open((err) => {
         if (err) throw err
         // speedy.write('S')
-        speedy.sendCommand(Buffer.from('Q'), new SResponse).then((response) => {
-            console.log(response)
+        speedy.sendCommand(Buffer.from('Q'), new SResponse(20)).then((response) => {
+            console.log(response.toString('ascii'))
         })
         // speedy.write(Buffer.from([0x72, 0x00, 0x30, 0x00, 0x00, 0x72, 0x00]))
     })
