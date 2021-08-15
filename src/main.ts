@@ -149,13 +149,13 @@ class TResponse implements SpeeduinoResponseParserPromise{
 }
 
 class SpeeduinoComm {
-    path: string
     sp: SerialPort
     parser: SpeeduinoParser
     lastPromise?: Promise<Buffer>
+    pauseBetweenCommands: number
 
-    constructor(path: string) {
-        this.path = path
+    constructor(path: string, pauseBetweenCommands: number = 10) {
+        this.pauseBetweenCommands = pauseBetweenCommands
         this.sp = new SerialPort(path, {baudRate: 115200, autoOpen: false})
         this.parser = this.sp.pipe(new SpeeduinoParser)
         this.parser.on('unexpected', (data) => console.log("Unexpected data", data))
@@ -178,6 +178,10 @@ class SpeeduinoComm {
         this.lastPromise = rp.getValue()
         if(!lastPromise) {
             lastPromise = new Promise<void>((resolve) => resolve())
+        } else {
+            lastPromise = lastPromise.then(() => {
+                return new Promise((resolve) => setInterval(resolve, this.pauseBetweenCommands))
+            })
         }
         lastPromise.finally(() => {
             this.parser.addParser(rp)
@@ -205,7 +209,7 @@ SerialPort.list().then(async (ports) => {
         speedy.sendCommand(Buffer.from('Q'), new SResponse(5)).then((response) => {
             console.log(response.toString('ascii'))
         })
-        speedy.sendCommand(Buffer.from('S'), new SResponse(5)).then((response) => {
+        speedy.sendCommand(Buffer.from('S'), new TResponse(100)).then((response) => {
             console.log(response.toString('ascii'))
         })
         // speedy.write(Buffer.from([0x72, 0x00, 0x30, 0x00, 0x00, 0x72, 0x00]))
