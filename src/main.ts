@@ -1,6 +1,6 @@
 import SerialPort from 'serialport'
 import prompt from 'prompt';
-import { Transform, TransformCallback } from 'stream'
+import { Transform, TransformCallback, Writable } from 'stream'
 import { createBrotliCompress } from 'zlib';
 
 class HexTransformer extends Transform {
@@ -17,7 +17,7 @@ class HexTransformer extends Transform {
     }
 }
 
-class SpeeduinoParser extends Transform {
+class SpeeduinoParser extends Writable {
     rp?: SpeeduinoResponseParser
     constructor() {
         super()
@@ -31,7 +31,7 @@ class SpeeduinoParser extends Transform {
         }
         this.rp = rp
     }
-    _transform(chunk: any, encoding: BufferEncoding, cb: TransformCallback): void {
+    _write(chunk: any, encoding: BufferEncoding, cb: (error?: Error | null) => void): void {
         let remaining = Buffer.from(chunk)
         while ((remaining.length > 0) && this.rp) {
             let [finished, used] = this.rp.write(remaining)
@@ -43,9 +43,6 @@ class SpeeduinoParser extends Transform {
         if (remaining.length > 0) {
             // TODO: Report error
         }
-        cb()
-    }
-    _flush(cb: TransformCallback) {
         cb()
     }
 }
