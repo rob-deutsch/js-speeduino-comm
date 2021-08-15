@@ -18,25 +18,29 @@ class HexTransformer extends Transform {
 }
 
 class SpeeduinoParser extends Transform {
-    rp: SpeeduinoResponseParser | null
+    rps: SpeeduinoResponseParser[]
     constructor() {
         super()
-        this.rp = null
+        this.rps = []
     }
     addParser(rp: SpeeduinoResponseParser) {
-        this.rp = rp
+        this.rps.push(rp)
     }
     _transform(chunk: any, encoding: BufferEncoding, cb: TransformCallback): void {
-        if (this.rp) {
-            const b = Buffer.from(chunk)
-            let [finished, used] = this.rp.write(b)
+        let remaining = Buffer.from(chunk)
+        let rp = this.rps.length > 0 ? this.rps[0] : undefined
+        while ((remaining.length > 0) && rp) {
+            let [finished, used] = rp.write(remaining)
             if (finished) {
-                if (used < b.length) {
-                    // There are extra bytes need to give to next parser?
-                }
+                // Remove this responseparser
+                this.rps.shift()
+                let rp = this.rps.length > 0 ? this.rps[0] : undefined
             }
+            remaining = remaining.slice(used)
         }
-        // TODO: This is a very big error state
+        if (remaining.length > 0) {
+            // TODO: Report error
+        }
         cb()
     }
     _flush(cb: TransformCallback) {
