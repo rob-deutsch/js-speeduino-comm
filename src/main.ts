@@ -51,11 +51,11 @@ interface SpeeduinoResponseParser {
     stop(): void
 }
 
-interface SpeeduinoResponseParserPromise extends SpeeduinoResponseParser{
+interface SpeeduinoResponseParserPromise extends SpeeduinoResponseParser {
     getValue(): Promise<Buffer>
 }
 
-class SResponse implements SpeeduinoResponseParserPromise{
+class SResponse implements SpeeduinoResponseParserPromise {
     position: number
     buffer: Buffer
     p: Promise<Buffer>
@@ -98,7 +98,7 @@ class SResponse implements SpeeduinoResponseParserPromise{
     }
 }
 
-class TResponse implements SpeeduinoResponseParserPromise{
+class TResponse implements SpeeduinoResponseParserPromise {
     interval: number
     intervalID?: NodeJS.Timeout
     position: number
@@ -132,7 +132,7 @@ class TResponse implements SpeeduinoResponseParserPromise{
         return [false, cursor]
     }
     emitPacket() {
-        this.pResolve!(this.buffer.slice(0,this.position))
+        this.pResolve!(this.buffer.slice(0, this.position))
         this.pResolve = undefined
         this.pReject = undefined
     }
@@ -156,13 +156,13 @@ class SpeeduinoComm {
 
     constructor(path: string, pauseBetweenCommands: number = 10) {
         this.pauseBetweenCommands = pauseBetweenCommands
-        this.sp = new SerialPort(path, {baudRate: 115200, autoOpen: false})
+        this.sp = new SerialPort(path, { baudRate: 115200, autoOpen: false })
         // this.sp.pipe(new HexTransformer).pipe(process.stdout)
         this.parser = this.sp.pipe(new SpeeduinoParser)
         this.parser.on('unexpected', (data) => console.log("Unexpected data", data))
     }
 
-    pipe<T extends NodeJS.WritableStream>(destination: T, options?: {end?: boolean}): T {
+    pipe<T extends NodeJS.WritableStream>(destination: T, options?: { end?: boolean }): T {
         return this.sp.pipe(destination)
     }
 
@@ -177,7 +177,7 @@ class SpeeduinoComm {
     async sendCommand(cmd: Buffer, rp: SpeeduinoResponseParserPromise): Promise<Buffer> {
         let lastPromise: Promise<any> | undefined = this.lastPromise
         this.lastPromise = rp.getValue()
-        if(!lastPromise) {
+        if (!lastPromise) {
             lastPromise = new Promise<void>((resolve) => resolve())
         } else {
             lastPromise = lastPromise.then(() => {
