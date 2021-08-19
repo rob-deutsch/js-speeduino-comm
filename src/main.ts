@@ -2,6 +2,7 @@ import SerialPort from 'serialport'
 import prompt from 'prompt';
 import { Transform, TransformCallback, Writable } from 'stream'
 import { createBrotliCompress } from 'zlib';
+import { Console } from 'console';
 
 class HexTransformer extends Transform {
     _transform(chunk: any, encoding: BufferEncoding, cb: TransformCallback): void {
@@ -159,7 +160,7 @@ class SpeeduinoComm {
         this.sp = new SerialPort(path, { baudRate: 115200, autoOpen: false })
         // this.sp.pipe(new HexTransformer).pipe(process.stdout)
         this.parser = this.sp.pipe(new SpeeduinoParser)
-        this.parser.on('unexpected', (data) => console.log("Unexpected data", data))
+        this.parser.on('unexpected', (data) => {console.log("Unexpected data", data); throw "ERROR"})
     }
 
     pipe<T extends NodeJS.WritableStream>(destination: T, options?: { end?: boolean }): T {
@@ -207,12 +208,25 @@ SerialPort.list().then(async (ports) => {
     speedy.open((err) => {
         if (err) throw err
         // speedy.write('S')
-        speedy.sendCommand(Buffer.from('Q'), new SResponse(5)).then((response) => {
+        speedy.sendCommand(Buffer.from('Q'), new TResponse(300)).then((response) => {
             console.log(response.toString('ascii'))
         })
-        speedy.sendCommand(Buffer.from('S'), new TResponse(100)).then((response) => {
-            console.log(response.toString('ascii'))
+        let count: number = 0;
+        let lastTime: number;
+        console.log("Sending request")
+        let getStatus = () => speedy.sendCommand(Buffer.from([0x72, 0x00, 0x30, 0x00, 0x00, 0x79, 0x00]), new SResponse(121)).then((response) => {
+            let thisTime = Date.now();
+            console.log(thisTime-lastTime, "got response length:", response.length, (response[26]<<8) + response[25])
+            lastTime = thisTime;
+            count++
+            // getStatus()
         })
+        // getStatus()
+        setInterval(getStatus, 1000)
+
+        // speedy.sendCommand(Buffer.from('L'), new TResponse(100)).then((response) => {
+        //     console.log(response.toString('ascii'))
+        // })
         // speedy.write(Buffer.from([0x72, 0x00, 0x30, 0x00, 0x00, 0x72, 0x00]))
     })
 })
