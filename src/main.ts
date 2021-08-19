@@ -3,6 +3,7 @@ import prompt from 'prompt';
 import { Transform, TransformCallback, Writable } from 'stream'
 import { createBrotliCompress } from 'zlib';
 import { Console } from 'console';
+import { Duplex } from 'node:stream';
 
 class HexTransformer extends Transform {
     _transform(chunk: any, encoding: BufferEncoding, cb: TransformCallback): void {
@@ -150,29 +151,17 @@ class TResponse implements PacketSpecPromise {
 }
 
 class SpeeduinoComm {
-    sp: SerialPort
+    conn: Duplex
     parser: ArbPacketParser
     lastPromise?: Promise<Buffer>
     pauseBetweenCommands: number
 
-    constructor(path: string, pauseBetweenCommands: number = 10) {
+    constructor(conn: Duplex, pauseBetweenCommands: number = 10) {
         this.pauseBetweenCommands = pauseBetweenCommands
-        this.sp = new SerialPort(path, { baudRate: 115200, autoOpen: false })
+        this.conn = conn
         // this.sp.pipe(new HexTransformer).pipe(process.stdout)
-        this.parser = this.sp.pipe(new ArbPacketParser)
+        this.parser = this.conn.pipe(new ArbPacketParser)
         this.parser.on('unexpected', (data) => {console.log("Unexpected data", data); throw "ERROR"})
-    }
-
-    pipe<T extends NodeJS.WritableStream>(destination: T, options?: { end?: boolean }): T {
-        return this.sp.pipe(destination)
-    }
-
-    open(cb?: (error?: Error | null) => void) {
-        this.sp.open(cb)
-    }
-
-    write(buffer: string | number[] | Buffer) {
-        this.sp.write(buffer)
     }
 
     async sendCommand(cmd: Buffer, rp: PacketSpecPromise): Promise<Buffer> {
@@ -187,7 +176,7 @@ class SpeeduinoComm {
         }
         lastPromise.finally(() => {
             this.parser.addParser(rp)
-            this.write(cmd)
+            this.conn.write(cmd)
         })
         return rp.getValue()
     }
@@ -203,9 +192,11 @@ SerialPort.list().then(async (ports) => {
     const choice = await prompt.get(['id'])
     const port = ports[parseInt(choice['id'] as string)]
 
-    const speedy = new SpeeduinoComm(port.path)
+    const sp = new SerialPort(port.path, { baudRate: 115200, autoOpen: false })
+    const speedy = new SpeeduinoComm(sp)
+
     // speedy.pipe(new HexTransformer()).pipe(process.stdout)
-    speedy.open((err) => {
+    sp.open((err) => {
         if (err) throw err
         // speedy.write('S')
         speedy.sendCommand(Buffer.from('Q'), new TResponse(300)).then((response) => {
