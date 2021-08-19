@@ -18,26 +18,26 @@ class HexTransformer extends Transform {
     }
 }
 
-class SpeeduinoParser extends Writable {
-    rp?: SpeeduinoResponseParser
+class ArbPacketParser extends Writable {
+    ps?: PacketSpec
     constructor() {
         super()
     }
-    addParser(rp: SpeeduinoResponseParser) {
-        if (this.rp) {
-            const finished = this.rp.write(Buffer.alloc(0))[0]
+    addParser(ps: PacketSpec) {
+        if (this.ps) {
+            const finished = this.ps.write(Buffer.alloc(0))[0]
             if (!finished) {
                 throw "Previous parser not finished"
             }
         }
-        this.rp = rp
+        this.ps = ps
     }
     _write(chunk: any, encoding: BufferEncoding, cb: (error?: Error | null) => void): void {
         let remaining = Buffer.from(chunk)
-        while ((remaining.length > 0) && this.rp) {
-            let [finished, used] = this.rp.write(remaining)
+        while ((remaining.length > 0) && this.ps) {
+            let [finished, used] = this.ps.write(remaining)
             if (finished) {
-                this.rp = undefined
+                this.ps = undefined
             }
             remaining = remaining.slice(used)
         }
@@ -47,16 +47,16 @@ class SpeeduinoParser extends Writable {
         cb()
     }
 }
-interface SpeeduinoResponseParser {
+interface PacketSpec {
     write(chunk: Buffer): [boolean, number]
     stop(): void
 }
 
-interface SpeeduinoResponseParserPromise extends SpeeduinoResponseParser {
+interface PacketSpecPromise extends PacketSpec {
     getValue(): Promise<Buffer>
 }
 
-class SResponse implements SpeeduinoResponseParserPromise {
+class SResponse implements PacketSpecPromise {
     position: number
     buffer: Buffer
     p: Promise<Buffer>
@@ -99,7 +99,7 @@ class SResponse implements SpeeduinoResponseParserPromise {
     }
 }
 
-class TResponse implements SpeeduinoResponseParserPromise {
+class TResponse implements PacketSpecPromise {
     interval: number
     intervalID?: NodeJS.Timeout
     position: number
@@ -151,7 +151,7 @@ class TResponse implements SpeeduinoResponseParserPromise {
 
 class SpeeduinoComm {
     sp: SerialPort
-    parser: SpeeduinoParser
+    parser: ArbPacketParser
     lastPromise?: Promise<Buffer>
     pauseBetweenCommands: number
 
@@ -159,7 +159,7 @@ class SpeeduinoComm {
         this.pauseBetweenCommands = pauseBetweenCommands
         this.sp = new SerialPort(path, { baudRate: 115200, autoOpen: false })
         // this.sp.pipe(new HexTransformer).pipe(process.stdout)
-        this.parser = this.sp.pipe(new SpeeduinoParser)
+        this.parser = this.sp.pipe(new ArbPacketParser)
         this.parser.on('unexpected', (data) => {console.log("Unexpected data", data); throw "ERROR"})
     }
 
@@ -175,7 +175,7 @@ class SpeeduinoComm {
         this.sp.write(buffer)
     }
 
-    async sendCommand(cmd: Buffer, rp: SpeeduinoResponseParserPromise): Promise<Buffer> {
+    async sendCommand(cmd: Buffer, rp: PacketSpecPromise): Promise<Buffer> {
         let lastPromise: Promise<any> | undefined = this.lastPromise
         this.lastPromise = rp.getValue()
         if (!lastPromise) {
