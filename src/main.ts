@@ -1,6 +1,6 @@
 import SerialPort from 'serialport'
 import prompt from 'prompt';
-import { Transform, TransformCallback, Writable } from 'stream'
+import { EventEmitter, Transform, TransformCallback, Writable } from 'stream'
 import { createBrotliCompress } from 'zlib';
 import { Console } from 'console';
 import { Duplex } from 'node:stream';
@@ -24,7 +24,7 @@ class ArbPacketParser extends Writable {
     constructor() {
         super()
     }
-    addParser(ps: PacketSpec) {
+    newPacketSpec(ps: PacketSpec) {
         if (this.ps) {
             const finished = this.ps.write(Buffer.alloc(0))[0]
             if (!finished) {
@@ -150,18 +150,19 @@ class TResponse implements PacketSpecPromise {
     }
 }
 
-class SpeeduinoComm {
+class HalfDuplexPackets extends EventEmitter {
     conn: Duplex
     parser: ArbPacketParser
     lastPromise?: Promise<Buffer>
     pauseBetweenCommands: number
 
     constructor(conn: Duplex, pauseBetweenCommands: number = 10) {
+        super()
         this.pauseBetweenCommands = pauseBetweenCommands
         this.conn = conn
         // this.sp.pipe(new HexTransformer).pipe(process.stdout)
         this.parser = this.conn.pipe(new ArbPacketParser)
-        this.parser.on('unexpected', (data) => {console.log("Unexpected data", data); throw "ERROR"})
+        this.parser.on('unexpected', (data) => this.emit('unexpected', data))
     }
 
     async sendCommand(cmd: Buffer, rp: PacketSpecPromise): Promise<Buffer> {
@@ -175,7 +176,7 @@ class SpeeduinoComm {
             })
         }
         lastPromise.finally(() => {
-            this.parser.addParser(rp)
+            this.parser.newPacketSpec(rp)
             this.conn.write(cmd)
         })
         return rp.getValue()
@@ -193,7 +194,8 @@ SerialPort.list().then(async (ports) => {
     const port = ports[parseInt(choice['id'] as string)]
 
     const sp = new SerialPort(port.path, { baudRate: 115200, autoOpen: false })
-    const speedy = new SpeeduinoComm(sp)
+    const speedy = new HalfDuplexPackets(sp)
+    speedy.on('unexpected', (data) => {console.log("Unexpected data:", data); throw "ERROR"})
 
     // speedy.pipe(new HexTransformer()).pipe(process.stdout)
     sp.open((err) => {
