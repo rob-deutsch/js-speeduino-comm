@@ -1,7 +1,7 @@
 import SerialPort from 'serialport'
 import prompt from 'prompt';
-import { HalfDuplexPackets } from './HalfDuplexPackets'
-import { Speeduino } from './Speeduino'
+import { HalfDuplexPackets } from '../HalfDuplexPackets'
+import { Speeduino } from '../Speeduino'
 
 async function logCPS(port: SerialPort.PortInfo, interval: number) {
     // Setup the required connections
