@@ -1,7 +1,7 @@
 import { PacketisedHalfDuplex, PacketSpecPromise } from './PacketisedHalfDuplex'
 import SerialPort from 'serialport'
 import { EventEmitter } from 'stream'
-import { NoResponse, SResponse, TResponse } from './PacketSpecs'
+import { NoResponse, FixedLengthResponse, InterByteTimeoutResponse } from './PacketSpecs'
 
 interface SerialPortConfig {
     path: string
@@ -45,11 +45,11 @@ class SpeeduinoRaw extends EventEmitter  {
     }
 
     async signature(): Promise<Buffer> {
-        return this.writeAndCloseIfError(Buffer.from('Q'), new TResponse(300))
+        return this.writeAndCloseIfError(Buffer.from('Q'), new InterByteTimeoutResponse(300))
     }
 
     async versionInfo(): Promise<Buffer> {
-        return this.writeAndCloseIfError(Buffer.from('S'), new TResponse(300))
+        return this.writeAndCloseIfError(Buffer.from('S'), new InterByteTimeoutResponse(300))
     }
 
     async setCurrentPage(pageNumber: number) {
@@ -60,19 +60,19 @@ class SpeeduinoRaw extends EventEmitter  {
     }
 
     async getCurrentPage(): Promise<Buffer> {
-        return this.writeAndCloseIfError(Buffer.from('L'), new TResponse(300))
+        return this.writeAndCloseIfError(Buffer.from('L'), new InterByteTimeoutResponse(300))
     }
 
     async loopsPerSecond(): Promise<Buffer> {
-        return this.writeAndCloseIfError(Buffer.from('c'), new SResponse(2))
+        return this.writeAndCloseIfError(Buffer.from('c'), new FixedLengthResponse(2))
     }
 
     async serialProtocolVersion(): Promise<Buffer> {
-        return this.writeAndCloseIfError(Buffer.from('F'), new TResponse(300))
+        return this.writeAndCloseIfError(Buffer.from('F'), new InterByteTimeoutResponse(300))
     }
 
     async freeRAM(): Promise<Buffer> {
-        return this.writeAndCloseIfError(Buffer.from('m'), new SResponse(2))
+        return this.writeAndCloseIfError(Buffer.from('m'), new FixedLengthResponse(2))
     }
 
     async outputChannels(length: number, canId: number = 0, cmd: number = 0x30, offset: number = 0): Promise<Buffer> {
@@ -84,7 +84,7 @@ class SpeeduinoRaw extends EventEmitter  {
         reqView.setUint16(3, offset, true)
         reqView.setUint16(5, length, true)
         let buf = Buffer.from(req)
-        return this.writeAndCloseIfError(buf, new SResponse(length))
+        return this.writeAndCloseIfError(buf, new FixedLengthResponse(length))
     }
 
 }

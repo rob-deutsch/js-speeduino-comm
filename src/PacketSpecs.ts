@@ -15,7 +15,7 @@ export class NoResponse implements PacketSpecPromise {
     }
 }
 
-export class SResponse implements PacketSpecPromise {
+export class FixedLengthResponse implements PacketSpecPromise {
     position: number
     buffer: Buffer
     p: Promise<Buffer>
@@ -59,18 +59,18 @@ export class SResponse implements PacketSpecPromise {
     }
 }
 
-export class TResponse implements PacketSpecPromise {
-    interval: number
+export class InterByteTimeoutResponse implements PacketSpecPromise {
+    timeoutMS: number
     intervalID?: NodeJS.Timeout
     position: number
     buffer: Buffer
     p: Promise<Buffer>
     pResolve?: (value: Buffer | PromiseLike<Buffer>) => void
     pReject?: (reason?: any) => void
-    constructor(interval: number, maxBufferSize: number = 65536) {
+    constructor(timeout: number, maxBufferSize: number = 65536) {
         this.position = 0
         this.buffer = Buffer.alloc(maxBufferSize)
-        this.interval = interval
+        this.timeoutMS = timeout
         this.p = new Promise((resolve, reject) => {
             this.pResolve = resolve
             this.pReject = reject
@@ -89,7 +89,7 @@ export class TResponse implements PacketSpecPromise {
                 return [true, cursor]
             }
         }
-        this.intervalID = setTimeout(() => this.emitPacket(), this.interval)
+        this.intervalID = setTimeout(() => this.emitPacket(), this.timeoutMS)
         return [false, cursor]
     }
     emitPacket() {
