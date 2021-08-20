@@ -72,6 +72,7 @@ class SResponse implements PacketSpecPromise {
         })
     }
     write(chunk: Buffer): [boolean, number] {
+        if (!this.pResolve) return [true, 0]
         let cursor = 0
         while (cursor < chunk.length) {
             this.buffer[this.position] = chunk[cursor]
@@ -90,7 +91,7 @@ class SResponse implements PacketSpecPromise {
     }
     stop() {
         if (this.pReject) {
-            this.pReject(this.buffer)
+            this.pReject(new Error('stop() called'))
             this.pResolve = undefined
             this.pReject = undefined
         }
@@ -130,7 +131,7 @@ class TResponse implements PacketSpecPromise {
                 return [true, cursor]
             }
         }
-        this.intervalID = setTimeout(this.emitPacket.bind(this), this.interval)
+        this.intervalID = setTimeout(() => this.emitPacket(), this.interval)
         return [false, cursor]
     }
     emitPacket() {
@@ -140,7 +141,7 @@ class TResponse implements PacketSpecPromise {
     }
     stop() {
         if (this.pReject) {
-            this.pReject(this.buffer)
+            this.pReject(new Error('stop() called'))
             this.pResolve = undefined
             this.pReject = undefined
         }
@@ -153,7 +154,7 @@ class TResponse implements PacketSpecPromise {
 class HalfDuplexPackets extends EventEmitter {
     conn: Duplex
     parser: ArbPacketParser
-    lastPromise?: Promise<Buffer>
+    lastPromise: Promise<any>
     pauseBetweenCommands: number
 
     constructor(conn: Duplex, pauseBetweenCommands: number = 10) {
@@ -163,22 +164,20 @@ class HalfDuplexPackets extends EventEmitter {
         // this.sp.pipe(new HexTransformer).pipe(process.stdout)
         this.parser = this.conn.pipe(new ArbPacketParser)
         this.parser.on('unexpected', (data) => this.emit('unexpected', data))
+        this.lastPromise = new Promise<void>(resolve => resolve())
     }
 
     async sendCommand(cmd: Buffer, rp: PacketSpecPromise): Promise<Buffer> {
-        let lastPromise: Promise<any> | undefined = this.lastPromise
-        this.lastPromise = rp.getValue()
-        if (!lastPromise) {
-            lastPromise = new Promise<void>((resolve) => resolve())
-        } else {
-            lastPromise = lastPromise.then(() => {
-                return new Promise((resolve) => setInterval(resolve, this.pauseBetweenCommands))
-            })
-        }
-        lastPromise.finally(() => {
+        // When the previous promise completes then send the next command
+        this.lastPromise.finally(() => {
             this.parser.newPacketSpec(rp)
             this.conn.write(cmd)
+            setTimeout(() => rp.stop(), 1000)
         })
+        // Define the ending condition of the last command
+        let promiseToWait = () => { return new Promise(resolve => setTimeout(resolve, this.pauseBetweenCommands)) }
+        this.lastPromise = rp.getValue().catch(() => {}).finally(() => promiseToWait())
+        
         return rp.getValue()
     }
 }
@@ -200,22 +199,29 @@ SerialPort.list().then(async (ports) => {
     // speedy.pipe(new HexTransformer()).pipe(process.stdout)
     sp.open((err) => {
         if (err) throw err
-        // speedy.write('S')
         speedy.sendCommand(Buffer.from('Q'), new TResponse(300)).then((response) => {
             console.log(response.toString('ascii'))
         })
         let count: number = 0;
         let lastTime: number;
         console.log("Sending request")
-        let getStatus = () => speedy.sendCommand(Buffer.from([0x72, 0x00, 0x30, 0x00, 0x00, 0x79, 0x00]), new SResponse(121)).then((response) => {
-            let thisTime = Date.now();
-            console.log(thisTime-lastTime, "got response length:", response.length, (response[26]<<8) + response[25])
-            lastTime = thisTime;
-            count++
-            // getStatus()
-        })
+        let getStatus = () => {
+            speedy.sendCommand(
+                Buffer.from([0x72, 0x00, 0x30, 0x00, 0x00, 0x79, 0x00]),
+                new SResponse(121)
+            ).then((response) => {
+                let thisTime = Date.now();
+                console.log(thisTime-lastTime, "got response length:", response.length, (response[26]<<8) + response[25])
+                lastTime = thisTime;
+                count++
+                // getStatus()
+            }).catch((error) => {
+                console.log("There was an error:", error.message)
+            })
+        }
         // getStatus()
-        setInterval(getStatus, 1000)
+        setTimeout(getStatus, 5000)
+        setTimeout(getStatus, 6000)
 
         // speedy.sendCommand(Buffer.from('L'), new TResponse(100)).then((response) => {
         //     console.log(response.toString('ascii'))
