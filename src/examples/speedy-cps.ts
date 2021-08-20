@@ -2,20 +2,17 @@
 
 import SerialPort from 'serialport'
 import prompt from 'prompt';
-import { PacketisedHalfDuplex } from '../PacketisedHalfDuplex'
 import { Speeduino } from '../Speeduino'
 
 async function logCPS(portPath: string, interval: number) {
     // Setup the required connections
-    const sp = new SerialPort(portPath, { baudRate: 115200, autoOpen: false })
-    sp.on('error', () => console.log("Serial port error"))
-    const conn = new PacketisedHalfDuplex(sp)
-    conn.on('unexpected', (data) => { console.log("Unexpected data:", data); throw "ERROR" })
-    const speedy = new Speeduino(conn)
+    const speedy = new Speeduino({path: portPath, options: { baudRate: 115200, autoOpen: false }})
+    speedy.on('error', () => console.log("Serial port error"))
+    speedy.on('unexpected', (data) => { console.log("Unexpected data:", data); throw "ERROR" })
 
     // Make sure we can connect
     try {
-        await new Promise<void>((resolve, reject) => sp.open((err) => err ? reject(err) : resolve()))
+        await new Promise<void>((resolve, reject) => speedy.open((err) => err ? reject(err) : resolve()))
     } catch (err) {
         console.log("Couldn't connect:", err)
         return
@@ -29,8 +26,6 @@ async function logCPS(portPath: string, interval: number) {
                 console.log("Version info:", response)})  
     } catch (err) {
         console.log("Error on info:", err.message)
-        sp.close()
-        return        
     }
 
     while (true) {
@@ -40,7 +35,6 @@ async function logCPS(portPath: string, interval: number) {
             console.log((new Date).toISOString(), "Cycles per second:", (response[26] << 8) + response[25])
         } catch (err) {
             console.log("Error on outputChannels:", err.message)
-            sp.close()
             return
         }
         await everyOneSecond

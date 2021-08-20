@@ -72,6 +72,10 @@ export class Speeduino extends EventEmitter {
         this.raw.on('unexpected', (...args) => this.emit('unexpected', args))
     }
 
+    open(cb?: (error?: Error | null | undefined) => void) {
+        this.raw.open(cb)
+    }
+
     async signature(): Promise<string> {
         return this.raw.signature().then(r => r.toString('ascii'))
     }
