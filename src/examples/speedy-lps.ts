@@ -36,7 +36,7 @@ async function logLPS(portPath: string, interval: number) {
             const response = await speedy.loopsPerSecond()
             console.log((new Date).toISOString(), "Loops per second:", response)
         } catch (err) {
-            console.log("Error on outputChannels:", err.message)
+            console.log("Error on loopsPerSecond:", err.message)
             return
         }
         await everyOneSecond
