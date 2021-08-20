@@ -182,21 +182,19 @@ class HalfDuplexPackets extends EventEmitter {
     }
 }
 
-class Speeduino {
+class SpeeduinoRaw {
     conn: HalfDuplexPackets
 
     constructor(conn: HalfDuplexPackets) {
         this.conn = conn
     }
 
-    async signature(): Promise<string> {
+    async signature(): Promise<Buffer> {
         return this.conn.sendCommand(Buffer.from('Q'), new TResponse(300))
-                .then(r => r.toString('ascii'))
     }
 
-    async versionInfo(): Promise<string> {
+    async versionInfo(): Promise<Buffer> {
         return this.conn.sendCommand(Buffer.from('S'), new TResponse(300))
-                .then(r => r.toString('ascii'))
     }
 
     async outputChannels(length: number, canId: number = 0, cmd: number = 0x30, offset: number = 0): Promise<Buffer> {
@@ -211,6 +209,22 @@ class Speeduino {
         return this.conn.sendCommand(buf, new SResponse(length))
     }
 
+}
+
+class Speeduino {
+    raw: SpeeduinoRaw
+
+    constructor(conn: HalfDuplexPackets) {
+        this.raw = new SpeeduinoRaw(conn)
+    }
+
+    async signature(): Promise<string> {
+        return this.raw.signature().then(r => r.toString('ascii'))
+    }
+
+    async versionInfo(): Promise<string> {
+        return this.raw.versionInfo().then(r => r.toString('ascii'))
+    }
 }
 
 SerialPort.list().then(async (ports) => {
@@ -236,13 +250,13 @@ SerialPort.list().then(async (ports) => {
             console.log("Version info:", response)
         })
 
-        let getStatus = () => {
-            speedy.outputChannels(121).then((response) => {
+        let logCPS = () => {
+            speedy.raw.outputChannels(121).then((response) => {
                 console.log((new Date).toISOString(), "Cycles per second:", (response[26]<<8) + response[25])
             }).catch((error) => {
                 console.log("Error on outputChannels:", error.message)
             })
         }
-        setInterval(getStatus, 1000/15)
+        setInterval(logCPS, 1000)
     })
 })
