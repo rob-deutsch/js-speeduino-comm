@@ -1,4 +1,4 @@
-﻿Code,Hex,Description,TS Description,sdcomm
+﻿Code,Hex,Description,TS Description,js-speeduino-comm
 a,0x61,sendValuesLegacy(),,
 A,0x41,"sendValues(0, LOG_ENTRY_SIZE, 0x31, 0)",,
 B,0x42,writeAllConfig(),,
