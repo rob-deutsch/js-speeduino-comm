@@ -5,9 +5,6 @@
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
   "prepublish": "tsc",
-  "bin": {
-    "speedy-lps": "lib/examples/speedy-lps.js"
-  },
   "scripts": {
     "start": "tsc && node lib/examples/speedy-lps.js",
     "test": "echo \"Error: no test specified\" && exit 1"
