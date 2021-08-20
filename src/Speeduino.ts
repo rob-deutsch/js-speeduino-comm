@@ -1,21 +1,42 @@
 import { PacketisedHalfDuplex, PacketSpecPromise } from './PacketisedHalfDuplex'
-
-
-
-import { SResponse, TResponse } from './PacketSpecs'
 import SerialPort from 'serialport'
 import { EventEmitter } from 'stream'
+import { SResponse, TResponse } from './PacketSpecs'
 
 interface SerialPortConfig {
     path: string
     options: SerialPort.OpenOptions
 }
 
-class SpeeduinoRaw {
-    conn: PacketisedHalfDuplex
-    
-    constructor(conn: PacketisedHalfDuplex) {
-        this.conn = conn
+class SpeeduinoRaw extends EventEmitter  {
+    private conn: PacketisedHalfDuplex
+    private openFunc: (cb?: (error?: Error | null | undefined) => void) => void
+
+    constructor(dev: PacketisedHalfDuplex | SerialPortConfig) {
+        super()
+
+        if (dev instanceof PacketisedHalfDuplex) {
+            this.conn = dev
+            this.openFunc = (cb) => cb ? cb() : null
+        } else {
+            dev.options.autoOpen = false
+            const sp = new SerialPort(dev.path, dev.options)
+            sp.on('error', () => sp.close())
+            sp.on('error', (...args) => this.emit('error', args))
+            const conn = new PacketisedHalfDuplex(sp)
+            conn.on('unexpected', (...args) => this.emit('unexpected', args))
+            this.conn = conn
+
+            this.openFunc = (cb) => sp.open(cb)
+        }
+    }
+
+    open(cb?: (error?: Error | null | undefined) => void) {
+        this.openFunc(cb)
+    }
+
+    async writeWhenOpen(cmd: Buffer, psp: PacketSpecPromise): Promise<Buffer> {
+        return this.conn.write(cmd, psp)
     }
 
     async signature(): Promise<Buffer> {
@@ -40,13 +61,15 @@ class SpeeduinoRaw {
 
 }
 
-export class Speeduino {
+export class Speeduino extends EventEmitter {
     raw: SpeeduinoRaw
-    private conn: PacketisedHalfDuplex
 
-    constructor(conn: PacketisedHalfDuplex) {
-        this.conn = conn
-        this.raw = new SpeeduinoRaw(conn)
+    constructor(dev: PacketisedHalfDuplex | SerialPortConfig) {
+        super()
+
+        this.raw = new SpeeduinoRaw(dev)
+        this.raw.on('error', (...args) => this.emit('error', args))
+        this.raw.on('unexpected', (...args) => this.emit('unexpected', args))
     }
 
     async signature(): Promise<string> {
@@ -58,6 +81,6 @@ export class Speeduino {
     }
 
     async rawCommand(cmd: Buffer, psp: PacketSpecPromise): Promise<Buffer> {
-        return this.conn.write(cmd, psp);
+        return this.raw.writeWhenOpen(cmd, psp);
     }
 }
