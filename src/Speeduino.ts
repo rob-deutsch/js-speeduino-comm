@@ -89,15 +89,11 @@ class SpeeduinoRaw extends EventEmitter  {
 
 }
 
-export class Speeduino extends EventEmitter {
+export class Speeduino {
     raw: SpeeduinoRaw
 
     constructor(dev: PacketisedHalfDuplex | SerialPortConfig) {
-        super()
-
         this.raw = new SpeeduinoRaw(dev)
-        this.raw.on('error', (...args) => this.emit('error', args))
-        this.raw.on('unexpected', (...args) => this.emit('unexpected', args))
     }
 
     open(cb?: (error?: Error | null | undefined) => void) {

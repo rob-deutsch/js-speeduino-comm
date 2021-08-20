@@ -7,8 +7,8 @@ import { Speeduino } from '../Speeduino'
 async function logLPS(portPath: string, interval: number) {
     // Setup the required connections
     const speedy = new Speeduino({ path: portPath, options: { baudRate: 115200, autoOpen: false } })
-    speedy.on('error', () => console.log("Serial port error"))
-    speedy.on('unexpected', (data) => { console.log("Unexpected data:", data); throw "ERROR" })
+    speedy.raw.on('error', () => console.log("Serial port error"))
+    speedy.raw.on('unexpected', (data) => { console.log("Unexpected data:", data); throw "ERROR" })
 
     // Make sure we can connect
     try {
