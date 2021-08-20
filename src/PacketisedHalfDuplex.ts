@@ -6,7 +6,7 @@ export interface PacketSpecPromise extends PacketSpec {
     getValue(): Promise<Buffer>
 }
 
-export class HalfDuplexPackets extends EventEmitter {
+export class PacketisedHalfDuplex extends EventEmitter {
     conn: Duplex
     parser: ArbPacketParser
     lastPromise: Promise<any>
@@ -24,7 +24,7 @@ export class HalfDuplexPackets extends EventEmitter {
         this.lastPromise = new Promise<void>(resolve => resolve())
     }
 
-    async sendCommand(cmd: Buffer, rp: PacketSpecPromise): Promise<Buffer> {
+    async write(cmd: Buffer, rp: PacketSpecPromise): Promise<Buffer> {
         // When the previous promise completes then send the next command
         this.lastPromise.finally(() => {
             this.parser.newPacketSpec(rp)

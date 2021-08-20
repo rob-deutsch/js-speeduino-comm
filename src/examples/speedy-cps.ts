@@ -2,14 +2,14 @@
 
 import SerialPort from 'serialport'
 import prompt from 'prompt';
-import { HalfDuplexPackets } from '../HalfDuplexPackets'
+import { PacketisedHalfDuplex } from '../PacketisedHalfDuplex'
 import { Speeduino } from '../Speeduino'
 
 async function logCPS(port: SerialPort.PortInfo, interval: number) {
     // Setup the required connections
     const sp = new SerialPort(port.path, { baudRate: 115200, autoOpen: false })
     sp.on('error', () => console.log("Serial port error"))
-    const conn = new HalfDuplexPackets(sp)
+    const conn = new PacketisedHalfDuplex(sp)
     conn.on('unexpected', (data) => { console.log("Unexpected data:", data); throw "ERROR" })
     const speedy = new Speeduino(conn)
 

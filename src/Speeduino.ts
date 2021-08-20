@@ -1,4 +1,4 @@
-import { HalfDuplexPackets, PacketSpecPromise } from './HalfDuplexPackets'
+import { PacketisedHalfDuplex, PacketSpecPromise } from './PacketisedHalfDuplex'
 
 class SResponse implements PacketSpecPromise {
     position: number
@@ -96,18 +96,18 @@ class TResponse implements PacketSpecPromise {
 
 
 class SpeeduinoRaw {
-    conn: HalfDuplexPackets
+    conn: PacketisedHalfDuplex
 
-    constructor(conn: HalfDuplexPackets) {
+    constructor(conn: PacketisedHalfDuplex) {
         this.conn = conn
     }
 
     async signature(): Promise<Buffer> {
-        return this.conn.sendCommand(Buffer.from('Q'), new TResponse(300))
+        return this.conn.write(Buffer.from('Q'), new TResponse(300))
     }
 
     async versionInfo(): Promise<Buffer> {
-        return this.conn.sendCommand(Buffer.from('S'), new TResponse(300))
+        return this.conn.write(Buffer.from('S'), new TResponse(300))
     }
 
     async outputChannels(length: number, canId: number = 0, cmd: number = 0x30, offset: number = 0): Promise<Buffer> {
@@ -119,16 +119,16 @@ class SpeeduinoRaw {
         reqView.setUint16(3, offset, true)
         reqView.setUint16(5, length, true)
         let buf = Buffer.from(req)
-        return this.conn.sendCommand(buf, new SResponse(length))
+        return this.conn.write(buf, new SResponse(length))
     }
 
 }
 
 export class Speeduino {
     raw: SpeeduinoRaw
-    private conn: HalfDuplexPackets
+    private conn: PacketisedHalfDuplex
 
-    constructor(conn: HalfDuplexPackets) {
+    constructor(conn: PacketisedHalfDuplex) {
         this.conn = conn
         this.raw = new SpeeduinoRaw(conn)
     }
@@ -142,6 +142,6 @@ export class Speeduino {
     }
 
     async rawCommand(cmd: Buffer, psp: PacketSpecPromise): Promise<Buffer> {
-        return this.conn.sendCommand(cmd, psp);
+        return this.conn.write(cmd, psp);
     }
 }
