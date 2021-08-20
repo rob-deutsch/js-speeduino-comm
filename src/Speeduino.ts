@@ -11,6 +11,7 @@ interface SerialPortConfig {
 class SpeeduinoRaw extends EventEmitter  {
     private conn: PacketisedHalfDuplex
     private openFunc: (cb?: (error?: Error | null | undefined) => void) => void
+    private closeFunc: () => void
 
     constructor(dev: PacketisedHalfDuplex | SerialPortConfig) {
         super()
@@ -18,16 +19,18 @@ class SpeeduinoRaw extends EventEmitter  {
         if (dev instanceof PacketisedHalfDuplex) {
             this.conn = dev
             this.openFunc = (cb) => cb ? cb() : null
+            this.closeFunc = () => {}
         } else {
             dev.options.autoOpen = false
             const sp = new SerialPort(dev.path, dev.options)
-            sp.on('error', () => sp.close())
+            sp.on('error', () => this.closeFunc() )
             sp.on('error', (...args) => this.emit('error', args))
             const conn = new PacketisedHalfDuplex(sp)
             conn.on('unexpected', (...args) => this.emit('unexpected', args))
             this.conn = conn
 
             this.openFunc = (cb) => sp.open(cb)
+            this.closeFunc = () => sp.close()
         }
     }
 
@@ -35,16 +38,18 @@ class SpeeduinoRaw extends EventEmitter  {
         this.openFunc(cb)
     }
 
-    async writeWhenOpen(cmd: Buffer, psp: PacketSpecPromise): Promise<Buffer> {
-        return this.conn.write(cmd, psp)
+    async writeAndCloseIfError(cmd: Buffer, psp: PacketSpecPromise): Promise<Buffer> {
+        let ret = this.conn.write(cmd, psp)
+        ret.catch(() => this.closeFunc())
+        return ret
     }
 
     async signature(): Promise<Buffer> {
-        return this.conn.write(Buffer.from('Q'), new TResponse(300))
+        return this.writeAndCloseIfError(Buffer.from('Q'), new TResponse(300))
     }
 
     async versionInfo(): Promise<Buffer> {
-        return this.conn.write(Buffer.from('S'), new TResponse(300))
+        return this.writeAndCloseIfError(Buffer.from('S'), new TResponse(300))
     }
 
     async outputChannels(length: number, canId: number = 0, cmd: number = 0x30, offset: number = 0): Promise<Buffer> {
@@ -56,7 +61,7 @@ class SpeeduinoRaw extends EventEmitter  {
         reqView.setUint16(3, offset, true)
         reqView.setUint16(5, length, true)
         let buf = Buffer.from(req)
-        return this.conn.write(buf, new SResponse(length))
+        return this.writeAndCloseIfError(buf, new SResponse(length))
     }
 
 }
@@ -85,6 +90,6 @@ export class Speeduino extends EventEmitter {
     }
 
     async rawCommand(cmd: Buffer, psp: PacketSpecPromise): Promise<Buffer> {
-        return this.raw.writeWhenOpen(cmd, psp);
+        return this.raw.writeAndCloseIfError(cmd, psp);
     }
 }
