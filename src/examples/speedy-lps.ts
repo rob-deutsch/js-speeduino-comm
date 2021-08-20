@@ -2,11 +2,11 @@
 
 import SerialPort from 'serialport'
 import prompt from 'prompt';
-import { Speeduino } from '../Speeduino'
+import { SpeeduinoComm } from '../Speeduino'
 
 async function logLPS(portPath: string, interval: number) {
     // Setup the required connections
-    const speedy = new Speeduino({ path: portPath, options: { baudRate: 115200, autoOpen: false } })
+    const speedy = new SpeeduinoComm({ path: portPath, options: { baudRate: 115200, autoOpen: false } })
     speedy.raw.on('error', () => console.log("Serial port error"))
     speedy.raw.on('unexpected', (data) => { console.log("Unexpected data:", data); throw "ERROR" })
 

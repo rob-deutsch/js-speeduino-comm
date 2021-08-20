@@ -8,7 +8,7 @@ interface SerialPortConfig {
     options: SerialPort.OpenOptions
 }
 
-class SpeeduinoRaw extends EventEmitter  {
+class SpeeduinoCommRaw extends EventEmitter  {
     private conn: PacketisedHalfDuplex
     private openFunc: (cb?: (error?: Error | null | undefined) => void) => void
     private closeFunc: () => void
@@ -89,11 +89,11 @@ class SpeeduinoRaw extends EventEmitter  {
 
 }
 
-export class Speeduino {
-    raw: SpeeduinoRaw
+export class SpeeduinoComm {
+    raw: SpeeduinoCommRaw
 
     constructor(dev: PacketisedHalfDuplex | SerialPortConfig) {
-        this.raw = new SpeeduinoRaw(dev)
+        this.raw = new SpeeduinoCommRaw(dev)
     }
 
     open(cb?: (error?: Error | null | undefined) => void) {
