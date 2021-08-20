@@ -1,5 +1,20 @@
 import { PacketSpecPromise } from './PacketisedHalfDuplex'
 
+export class NoResponse implements PacketSpecPromise {
+    p: Promise<Buffer>
+    constructor() {
+        this.p = new Promise(resolve => resolve(Buffer.alloc(0)))
+    }
+    write(chunk: Buffer): [boolean, number] {
+        return [true, 0]
+    }
+    timeout() {
+    }
+    getValue(): Promise<Buffer> {
+        return this.p
+    }
+}
+
 export class SResponse implements PacketSpecPromise {
     position: number
     buffer: Buffer

@@ -1,7 +1,7 @@
 import { PacketisedHalfDuplex, PacketSpecPromise } from './PacketisedHalfDuplex'
 import SerialPort from 'serialport'
 import { EventEmitter } from 'stream'
-import { SResponse, TResponse } from './PacketSpecs'
+import { NoResponse, SResponse, TResponse } from './PacketSpecs'
 
 interface SerialPortConfig {
     path: string
@@ -52,10 +52,33 @@ class SpeeduinoRaw extends EventEmitter  {
         return this.writeAndCloseIfError(Buffer.from('S'), new TResponse(300))
     }
 
+    async setCurrentPage(pageNumber: number) {
+        let req = Buffer.alloc(2)
+        req.writeUInt8(0x50, 0)
+        req.writeUInt8(pageNumber, 1)
+        return this.writeAndCloseIfError(req, new NoResponse())
+    }
+
+    async getCurrentPage(): Promise<Buffer> {
+        return this.writeAndCloseIfError(Buffer.from('L'), new TResponse(300))
+    }
+
+    async loopsPerSecond(): Promise<Buffer> {
+        return this.writeAndCloseIfError(Buffer.from('c'), new SResponse(2))
+    }
+
+    async serialProtocolVersion(): Promise<Buffer> {
+        return this.writeAndCloseIfError(Buffer.from('F'), new TResponse(300))
+    }
+
+    async freeRAM(): Promise<Buffer> {
+        return this.writeAndCloseIfError(Buffer.from('m'), new SResponse(2))
+    }
+
     async outputChannels(length: number, canId: number = 0, cmd: number = 0x30, offset: number = 0): Promise<Buffer> {
         let req = new ArrayBuffer(7)
         let reqView = new DataView(req)
-        reqView.setUint8(0, 0x72)
+        reqView.setUint8(0, 0x72) // r
         reqView.setUint8(1, canId)
         reqView.setUint8(2, cmd)
         reqView.setUint16(3, offset, true)
@@ -87,6 +110,26 @@ export class Speeduino extends EventEmitter {
 
     async versionInfo(): Promise<string> {
         return this.raw.versionInfo().then(r => r.toString('ascii'))
+    }
+
+    async setCurrentPage(pageNumber: number) {
+        return this.raw.setCurrentPage(pageNumber)
+    }
+
+    async getCurrentPage(): Promise<string> {
+        return this.raw.getCurrentPage().then(r => r.toString('ascii'))
+    }
+
+    async loopsPerSecond(): Promise<number> {
+        return this.raw.loopsPerSecond().then(r => (r[1] << 8) + r[0])
+    }
+
+    async serialProtocolVersion(): Promise<string> {
+        return this.raw.serialProtocolVersion().then(r => r.toString('ascii'))
+    }
+
+    async freeRAM(): Promise<number> {
+        return this.raw.freeRAM().then(r => (r[1] << 8) + r[0])
     }
 
     async rawCommand(cmd: Buffer, psp: PacketSpecPromise): Promise<Buffer> {
