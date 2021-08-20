@@ -1,3 +1,3 @@
 export * from './ArbPacketParser'
 export * from './PacketisedHalfDuplex'
-export * from './Speeduino'
+export * from './SpeeduinoComm'
