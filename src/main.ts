@@ -211,8 +211,6 @@ class Speeduino {
 
 }
 
-
-console.log("Initial run");
 SerialPort.list().then(async (ports) => {
     for (let idx in ports) {
         const port = ports[idx]
@@ -230,22 +228,19 @@ SerialPort.list().then(async (ports) => {
     sp.open((err) => {
         if (err) throw err
         speedy.signature().then((response) => {
-            console.log("Version:", response)
+            console.log("Signature:", response)
         })
         speedy.versionInfo().then((response) => {
-            console.log("Version:", response)
+            console.log("Version info:", response)
         })
 
-        let lastTime: number;
         let getStatus = () => {
             speedy.outputChannels(121).then((response) => {
-                let thisTime = Date.now();
-                console.log(thisTime-lastTime, "got response length:", response.length, (response[26]<<8) + response[25])
-                lastTime = thisTime;
+                console.log((new Date).toISOString(), "Cycles per second:", (response[26]<<8) + response[25])
             }).catch((error) => {
-                console.log("Error on getStatus:", error.message)
+                console.log("Error on outputChannels:", error.message)
             })
         }
-        setInterval(getStatus, 1000)
+        setInterval(getStatus, 1000/15)
     })
 })
