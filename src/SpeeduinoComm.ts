@@ -22,6 +22,7 @@ class SpeeduinoCommRaw extends EventEmitter  {
             this.closeFunc = () => {}
         } else {
             dev.options.autoOpen = false
+            if (!dev.options.baudRate) dev.options.baudRate = 115200
             const sp = new SerialPort(dev.path, dev.options)
             sp.on('error', () => this.closeFunc() )
             sp.on('error', (...args) => this.emit('error', args))
