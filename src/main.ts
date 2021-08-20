@@ -1,9 +1,7 @@
 import SerialPort from 'serialport'
 import prompt from 'prompt';
 import { EventEmitter, Transform, TransformCallback, Writable } from 'stream'
-import { createBrotliCompress } from 'zlib';
-import { Console } from 'console';
-import { Duplex } from 'node:stream';
+import { Duplex } from 'stream';
 
 class HexTransformer extends Transform {
     _transform(chunk: any, encoding: BufferEncoding, cb: TransformCallback): void {
@@ -182,6 +180,37 @@ class HalfDuplexPackets extends EventEmitter {
     }
 }
 
+class Speeduino {
+    conn: HalfDuplexPackets
+
+    constructor(conn: HalfDuplexPackets) {
+        this.conn = conn
+    }
+
+    async signature(): Promise<string> {
+        return this.conn.sendCommand(Buffer.from('Q'), new TResponse(300))
+                .then(r => r.toString('ascii'))
+    }
+
+    async versionInfo(): Promise<string> {
+        return this.conn.sendCommand(Buffer.from('S'), new TResponse(300))
+                .then(r => r.toString('ascii'))
+    }
+
+    async outputChannels(length: number, canId: number = 0, cmd: number = 0x30, offset: number = 0): Promise<Buffer> {
+        let req = new ArrayBuffer(7)
+        let reqView = new DataView(req)
+        reqView.setUint8(0, 0x72)
+        reqView.setUint8(1, canId)
+        reqView.setUint8(2, cmd)
+        reqView.setUint16(3, offset, true)
+        reqView.setUint16(5, length, true)
+        let buf = Buffer.from(req)
+        return this.conn.sendCommand(buf, new SResponse(length))
+    }
+
+}
+
 
 console.log("Initial run");
 SerialPort.list().then(async (ports) => {
@@ -193,39 +222,30 @@ SerialPort.list().then(async (ports) => {
     const port = ports[parseInt(choice['id'] as string)]
 
     const sp = new SerialPort(port.path, { baudRate: 115200, autoOpen: false })
-    const speedy = new HalfDuplexPackets(sp)
-    speedy.on('unexpected', (data) => {console.log("Unexpected data:", data); throw "ERROR"})
+    const conn = new HalfDuplexPackets(sp)
+    conn.on('unexpected', (data) => {console.log("Unexpected data:", data); throw "ERROR"})
+    const speedy = new Speeduino(conn)
 
     // speedy.pipe(new HexTransformer()).pipe(process.stdout)
     sp.open((err) => {
         if (err) throw err
-        speedy.sendCommand(Buffer.from('Q'), new TResponse(300)).then((response) => {
-            console.log(response.toString('ascii'))
+        speedy.signature().then((response) => {
+            console.log("Version:", response)
         })
-        let count: number = 0;
+        speedy.versionInfo().then((response) => {
+            console.log("Version:", response)
+        })
+
         let lastTime: number;
-        console.log("Sending request")
         let getStatus = () => {
-            speedy.sendCommand(
-                Buffer.from([0x72, 0x00, 0x30, 0x00, 0x00, 0x79, 0x00]),
-                new SResponse(121)
-            ).then((response) => {
+            speedy.outputChannels(121).then((response) => {
                 let thisTime = Date.now();
                 console.log(thisTime-lastTime, "got response length:", response.length, (response[26]<<8) + response[25])
                 lastTime = thisTime;
-                count++
-                // getStatus()
             }).catch((error) => {
-                console.log("There was an error:", error.message)
+                console.log("Error on getStatus:", error.message)
             })
         }
-        // getStatus()
-        setTimeout(getStatus, 5000)
-        setTimeout(getStatus, 6000)
-
-        // speedy.sendCommand(Buffer.from('L'), new TResponse(100)).then((response) => {
-        //     console.log(response.toString('ascii'))
-        // })
-        // speedy.write(Buffer.from([0x72, 0x00, 0x30, 0x00, 0x00, 0x72, 0x00]))
+        setInterval(getStatus, 1000)
     })
 })
