@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 import SerialPort from 'serialport'
 import prompt from 'prompt';
 import { HalfDuplexPackets } from '../HalfDuplexPackets'

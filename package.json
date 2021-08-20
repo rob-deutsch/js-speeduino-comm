@@ -4,6 +4,9 @@
   "description": "",
   "main": "lib/main.js",
   "types": "lib/main.d.ts",
+  "bin": {
+    "speedy-cps": "lib/examples/speedy-cps.js"
+  },
   "scripts": {
     "start": "tsc && node lib/examples/speedy-cps.js",
     "test": "echo \"Error: no test specified\" && exit 1"
