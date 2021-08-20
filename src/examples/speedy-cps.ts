@@ -4,7 +4,7 @@ import SerialPort from 'serialport'
 import prompt from 'prompt';
 import { Speeduino } from '../Speeduino'
 
-async function logCPS(portPath: string, interval: number) {
+async function logLPS(portPath: string, interval: number) {
     // Setup the required connections
     const speedy = new Speeduino({path: portPath, options: { baudRate: 115200, autoOpen: false }})
     speedy.on('error', () => console.log("Serial port error"))
@@ -32,7 +32,7 @@ async function logCPS(portPath: string, interval: number) {
         const everyOneSecond = new Promise<void>(resolve => setTimeout(resolve, interval))
         try {
             const response = await speedy.raw.outputChannels(121)
-            console.log((new Date).toISOString(), "Cycles per second:", (response[26] << 8) + response[25])
+            console.log((new Date).toISOString(), "Loops per second:", (response[26] << 8) + response[25])
         } catch (err) {
             console.log("Error on outputChannels:", err.message)
             return
@@ -51,7 +51,7 @@ SerialPort.list().then(async (ports) => {
 
     const continuallLogCPS = async (interval: number) => {
         while (true) {
-            await logCPS(portPath, interval)
+            await logLPS(portPath, interval)
             await new Promise<void>(resolve => setTimeout(resolve, interval))
         }
     }
