@@ -126,8 +126,10 @@ class SpeeduinoRaw {
 
 export class Speeduino {
     raw: SpeeduinoRaw
+    private conn: HalfDuplexPackets
 
     constructor(conn: HalfDuplexPackets) {
+        this.conn = conn
         this.raw = new SpeeduinoRaw(conn)
     }
 
@@ -137,5 +139,9 @@ export class Speeduino {
 
     async versionInfo(): Promise<string> {
         return this.raw.versionInfo().then(r => r.toString('ascii'))
+    }
+
+    async rawCommand(cmd: Buffer, psp: PacketSpecPromise): Promise<Buffer> {
+        return this.conn.sendCommand(cmd, psp);
     }
 }
