@@ -6,10 +6,10 @@
   "types": "lib/index.d.ts",
   "prepublish": "tsc",
   "bin": {
-    "speedy-cps": "lib/examples/speedy-cps.js"
+    "speedy-lps": "lib/examples/speedy-lps.js"
   },
   "scripts": {
-    "start": "tsc && node lib/examples/speedy-cps.js",
+    "start": "tsc && node lib/examples/speedy-lps.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",
