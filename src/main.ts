@@ -14,26 +14,30 @@ async function logCPS(port: SerialPort.PortInfo, interval: number) {
     // Make sure we can connect
     try {
         await new Promise<void>((resolve, reject) => sp.open((err) => err ? reject(err) : resolve()))
-    } catch (e) {
-        console.log("Couldn't connect:", e)
+    } catch (err) {
+        console.log("Couldn't connect:", err)
         return
     }
 
     // Display the signatures
-    speedy.signature().then((response) => {
-        console.log("Signature:", response)
-    })
-    speedy.versionInfo().then((response) => {
-        console.log("Version info:", response)
-    })
+    try {
+        await speedy.signature().then((response) => {
+                console.log("Signature:", response)})
+        await speedy.versionInfo().then((response) => {
+                console.log("Version info:", response)})  
+    } catch (err) {
+        console.log("Error on info:", err.message)
+        sp.close()
+        return        
+    }
 
     while (true) {
         const everyOneSecond = new Promise<void>(resolve => setTimeout(resolve, interval))
         try {
             const response = await speedy.raw.outputChannels(121)
             console.log((new Date).toISOString(), "Cycles per second:", (response[26] << 8) + response[25])
-        } catch (error) {
-            console.log("Error on outputChannels:", error.message)
+        } catch (err) {
+            console.log("Error on outputChannels:", err.message)
             sp.close()
             return
         }

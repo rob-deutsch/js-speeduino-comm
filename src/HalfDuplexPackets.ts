@@ -33,8 +33,8 @@ export class HalfDuplexPackets extends EventEmitter {
         })
         // Define the ending condition of the last command
         let promiseToWait = () => { return new Promise(resolve => setTimeout(resolve, this.pauseBetweenCommands)) }
-        this.lastPromise = rp.getValue().catch(() => {}).finally(() => promiseToWait())
-        
+        this.lastPromise = rp.getValue().catch(() => { }).finally(() => promiseToWait())
+
         return rp.getValue()
     }
 }

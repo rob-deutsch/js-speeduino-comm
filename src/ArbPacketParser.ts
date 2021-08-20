@@ -1,7 +1,7 @@
 import { Writable } from 'stream'
 
 export interface PacketSpec {
-    write(chunk: Buffer): [boolean, number]
+    write(chunk: Buffer): [finished: boolean, used: number]
     timeout(): void
 }
 
