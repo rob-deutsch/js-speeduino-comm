@@ -5,9 +5,9 @@ import prompt from 'prompt';
 import { PacketisedHalfDuplex } from '../PacketisedHalfDuplex'
 import { Speeduino } from '../Speeduino'
 
-async function logCPS(port: SerialPort.PortInfo, interval: number) {
+async function logCPS(portPath: string, interval: number) {
     // Setup the required connections
-    const sp = new SerialPort(port.path, { baudRate: 115200, autoOpen: false })
+    const sp = new SerialPort(portPath, { baudRate: 115200, autoOpen: false })
     sp.on('error', () => console.log("Serial port error"))
     const conn = new PacketisedHalfDuplex(sp)
     conn.on('unexpected', (data) => { console.log("Unexpected data:", data); throw "ERROR" })
@@ -53,11 +53,11 @@ SerialPort.list().then(async (ports) => {
         console.log(`[${idx}]: ${port.path}`)
     }
     const choice = await prompt.get(['id'])
-    const port = ports[parseInt(choice['id'] as string)]
+    const portPath = ports[parseInt(choice['id'] as string)].path
 
     const continuallLogCPS = async (interval: number) => {
         while (true) {
-            await logCPS(port, interval)
+            await logCPS(portPath, interval)
             await new Promise<void>(resolve => setTimeout(resolve, interval))
         }
     }
