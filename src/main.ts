@@ -48,7 +48,7 @@ class ArbPacketParser extends Writable {
 }
 interface PacketSpec {
     write(chunk: Buffer): [boolean, number]
-    stop(): void
+    timeout(): void
 }
 
 interface PacketSpecPromise extends PacketSpec {
@@ -87,9 +87,9 @@ class SResponse implements PacketSpecPromise {
         }
         return [false, cursor]
     }
-    stop() {
+    timeout() {
         if (this.pReject) {
-            this.pReject(new Error('stop() called'))
+            this.pReject(new Error('Timeout'))
             this.pResolve = undefined
             this.pReject = undefined
         }
@@ -137,9 +137,9 @@ class TResponse implements PacketSpecPromise {
         this.pResolve = undefined
         this.pReject = undefined
     }
-    stop() {
+    timeout() {
         if (this.pReject) {
-            this.pReject(new Error('stop() called'))
+            this.pReject(new Error('Timeout'))
             this.pResolve = undefined
             this.pReject = undefined
         }
@@ -153,11 +153,13 @@ class HalfDuplexPackets extends EventEmitter {
     conn: Duplex
     parser: ArbPacketParser
     lastPromise: Promise<any>
+    commandTimeout: number
     pauseBetweenCommands: number
 
-    constructor(conn: Duplex, pauseBetweenCommands: number = 10) {
+    constructor(conn: Duplex, commandTimeout: number = 1000, pauseBetweenCommands: number = 10) {
         super()
         this.pauseBetweenCommands = pauseBetweenCommands
+        this.commandTimeout = commandTimeout
         this.conn = conn
         // this.sp.pipe(new HexTransformer).pipe(process.stdout)
         this.parser = this.conn.pipe(new ArbPacketParser)
@@ -170,7 +172,7 @@ class HalfDuplexPackets extends EventEmitter {
         this.lastPromise.finally(() => {
             this.parser.newPacketSpec(rp)
             this.conn.write(cmd)
-            setTimeout(() => rp.stop(), 1000)
+            setTimeout(() => rp.timeout(), this.commandTimeout)
         })
         // Define the ending condition of the last command
         let promiseToWait = () => { return new Promise(resolve => setTimeout(resolve, this.pauseBetweenCommands)) }
