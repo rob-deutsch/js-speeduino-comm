@@ -17,7 +17,7 @@ Typescript:
 ```typescript
 #!/usr/bin/env node
 
-import { SpeeduinoComm } from '../SpeeduinoComm'
+import { SpeeduinoComm } from 'speeduino-comm'
 const speedy = new SpeeduinoComm({path: '/dev/tty.USB0'})
 
 speedy.open((err) => {
