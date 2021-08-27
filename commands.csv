@@ -8,8 +8,8 @@ c,0x63,loops/second,,loopsPerSecond
 d,0x64,calculateCRC32(),crc32CheckCommand,
 E,0x45,TS_CommandButtonsHandler(),various commands,
 F,0x46,Send serial protocol version,,
-H,0x48,Start tooth logger,toothLogger startCommand,
-h,0x68,Stop tooth logger,toothLogger stopCommand,
+H,0x48,Start tooth logger,toothLogger startCommand,startToothLogger
+h,0x68,Stop tooth logger,toothLogger stopCommand,stopToothLogger
 J,0x4A,Start composite logger,compositeLogger startCommand,
 j,0x6A,Stop composite logger,compositeLogged stopCommand,
 L,0x4C,sendPageASCII(),,getCurrentPage
@@ -20,7 +20,7 @@ p,0x70,New method for sending page values,pageReadCommand,
 Q,0x51,Code version,queryCommand,signature
 r,0x72,New format for optimised outputchannels,ochGetCommand,outputChannels (raw)
 S,0x53,Send code version,versionInfo (aka signature),versionInfo
-T,0x54,sendToothLog(0) or sendCompsoiteLog(0),logger dataReadCommand (dataReadTimeout),
+T,0x54,sendToothLog(0) or sendCompsoiteLog(0),logger dataReadCommand (dataReadTimeout),toothLog()
 t,0x74,Receive new calibration info,,
 U,0x55,User wants to reset,,
 V,0x56,sendPage(),,

@@ -68,6 +68,19 @@ class SpeeduinoCommRaw extends EventEmitter  {
         return this.writeAndCloseIfError(Buffer.from('c'), new FixedLengthResponse(2))
     }
 
+    async startToothLogger(): Promise<Buffer> {
+        return this.writeAndCloseIfError(Buffer.from('H'), new FixedLengthResponse(1))
+    }
+
+    async stopToothLogger() {
+        return this.writeAndCloseIfError(Buffer.from('h'), new NoResponse)
+    }
+
+    async toothLog(): Promise<Buffer> {
+        // Note that the 'a' character can be anything
+        return this.writeAndCloseIfError(Buffer.from('Taaaaaa'), new FixedLengthResponse(508))
+    }
+
     async serialProtocolVersion(): Promise<Buffer> {
         return this.writeAndCloseIfError(Buffer.from('F'), new InterByteTimeoutResponse(300))
     }
@@ -119,6 +132,26 @@ export class SpeeduinoComm {
 
     async loopsPerSecond(): Promise<number> {
         return this.raw.loopsPerSecond().then(r => (r[1] << 8) + r[0])
+    }
+
+    async startToothLogger() {
+        return this.raw.startToothLogger()
+    }
+
+    async stopToothLogger() {
+        return this.raw.stopToothLogger()
+    }
+
+    async toothLog(): Promise<Uint32Array> {
+        return this.raw.toothLog().then((buf) => {
+            const numTeethReceived = Math.floor(buf.length / 4)
+            let teethTime = new Uint32Array(numTeethReceived)
+            let dv = new DataView(buf.buffer)
+            for (var i = 0; i < numTeethReceived; i++) {
+                teethTime[i] = dv.getUint32(4*i)
+            }
+            return teethTime
+        })
     }
 
     async serialProtocolVersion(): Promise<string> {
